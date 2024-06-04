@@ -1,45 +1,38 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import interact from "interactjs";
+import axios from "axios";
 
 function App() {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      name: "Item 1",
-      imageUrl:
-        "https://us-tuna-sounds-images.voicemod.net/78f23c41-369a-4769-9568-7aae749c4e06-1704762972412.jpg",
-    },
-    {
-      id: 2,
-      name: "Item 2",
-      imageUrl:
-        "https://us-tuna-sounds-images.voicemod.net/78f23c41-369a-4769-9568-7aae749c4e06-1704762972412.jpg",
-    },
-    {
-      id: 3,
-      name: "Item 3",
-      imageUrl:
-        "https://us-tuna-sounds-images.voicemod.net/78f23c41-369a-4769-9568-7aae749c4e06-1704762972412.jpg",
-    },
-    {
-      id: 4,
-      name: "Item 4",
-      imageUrl:
-        "https://us-tuna-sounds-images.voicemod.net/78f23c41-369a-4769-9568-7aae749c4e06-1704762972412.jpg",
-    },
-    {
-      id: 5,
-      name: "Item 5",
-      imageUrl:
-        "https://us-tuna-sounds-images.voicemod.net/78f23c41-369a-4769-9568-7aae749c4e06-1704762972412.jpg",
-    },
-  ]);
-
+  const [items, setItems] = useState([]);
   const [newItemName, setNewItemName] = useState("");
   const [newItemImageUrl, setNewItemImageUrl] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
+  const [classrooms, setClassrooms] = useState([]);
+  const [currentClassroom, setCurrentClassroom] = useState("");
+
+  useEffect(() => {
+    fetchClassrooms();
+  }, []);
+
+  const fetchClassrooms = async () => {
+    const response = await axios.get("http://localhost:5000/classrooms");
+    setClassrooms(response.data);
+  };
+
+  useEffect(() => {
+    if (currentClassroom) {
+      fetchItems();
+    }
+  }, [currentClassroom]);
+
+  const fetchItems = async () => {
+    const response = await axios.get(
+      `http://localhost:5000/items?classroom=${currentClassroom}`,
+    );
+    setItems(response.data);
+  };
 
   useEffect(() => {
     interact(".drag-drop").draggable({
@@ -60,6 +53,9 @@ function App() {
           target.style.transform = `translate(${x}px, ${y}px)`;
           target.setAttribute("data-x", x);
           target.setAttribute("data-y", y);
+
+          const id = target.getAttribute("id").split("-")[1];
+          updateItemPosition(id, x, y);
         },
       },
     });
@@ -89,27 +85,36 @@ function App() {
     });
   }, []);
 
-  const handleNameChange = (id, newName) => {
+  const updateItemPosition = async (id, x, y) => {
+    await axios.put(`http://localhost:5000/items/${id}`, { x, y });
+  };
+
+  const handleNameChange = async (id, newName) => {
+    const updatedItem = await axios.put(`http://localhost:5000/items/${id}`, {
+      name: newName,
+    });
     setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id ? { ...item, name: newName } : item,
-      ),
+      prevItems.map((item) => (item._id === id ? updatedItem.data : item)),
     );
   };
 
-  const addItem = () => {
+  const addItem = async () => {
     const newItem = {
-      id: items.length + 1,
       name: newItemName,
       imageUrl: newItemImageUrl,
+      x: 0,
+      y: 0,
+      classroom: currentClassroom,
     };
-    setItems([...items, newItem]);
+    const response = await axios.post("http://localhost:5000/items", newItem);
+    setItems([...items, response.data]);
     setNewItemName("");
     setNewItemImageUrl("");
   };
 
-  const deleteItem = (id) => {
-    setItems(items.filter((item) => item.id !== id));
+  const deleteItem = async (id) => {
+    await axios.delete(`http://localhost:5000/items/${id}`);
+    setItems(items.filter((item) => item._id !== id));
   };
 
   const openEditModal = (item) => {
@@ -127,40 +132,83 @@ function App() {
     setCurrentItem((prevItem) => ({ ...prevItem, [name]: value }));
   };
 
-  const saveChanges = () => {
+  const saveChanges = async () => {
+    const updatedItem = await axios.put(
+      `http://localhost:5000/items/${currentItem._id}`,
+      currentItem,
+    );
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === currentItem.id ? currentItem : item,
+        item._id === currentItem._id ? updatedItem.data : item,
       ),
     );
     closeModal();
   };
 
+  const createClassroom = async (classroomName) => {
+    await axios.post("http://localhost:5000/classrooms", {
+      classroom: classroomName,
+    });
+    fetchClassrooms();
+  };
+
+  const switchClassroom = async (classroomName) => {
+    setCurrentClassroom(classroomName);
+  };
+
   return (
     <div className="App">
       <div className="container">
+        <div>
+          <button
+            onClick={() => {
+              const classroomName = prompt("Enter Classroom Name:");
+              if (classroomName) {
+                createClassroom(classroomName);
+              }
+            }}
+          >
+            Create Classroom
+          </button>
+          <select
+            onChange={(e) => switchClassroom(e.target.value)}
+            value={currentClassroom}
+          >
+            <option value="" disabled>
+              Select Classroom
+            </option>
+            {classrooms.map((classroom) => (
+              <option key={classroom} value={classroom}>
+                {classroom}
+              </option>
+            ))}
+          </select>
+        </div>
         <div id="outer-dropzone" className="dropzone">
           Classroom
         </div>
         {items.map((item) => (
           <div
-            key={item.id}
+            key={item._id}
             className="drag-drop"
-            id={`item-${item.id}`}
+            id={`item-${item._id}`}
             style={{
               backgroundImage: `url(${item.imageUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
+              transform: `translate(${item.x}px, ${item.y}px)`,
             }}
+            data-x={item.x}
+            data-y={item.y}
           >
             <input
               type="text"
               value={item.name}
-              onChange={(e) => handleNameChange(item.id, e.target.value)}
+              onChange={(e) => handleNameChange(item._id, e.target.value)}
               style={{ width: "72px", textAlign: "center" }}
             />
             <button onClick={() => openEditModal(item)}>Edit</button>
-            <button onClick={() => deleteItem(item.id)}>Delete</button>
+            <button onClick={() => deleteItem(item._id)}>Delete</button>
           </div>
         ))}
         <div className="new-item-form">
