@@ -145,11 +145,20 @@ function App() {
     closeModal();
   };
 
-  const createClassroom = async (classroomName) => {
+  const createClassroom = async () => {
+    const classroomName = document.getElementById("new-classroom-name").value;
+    const classroomItems = items.map((item) => ({
+      ...item,
+      classroom: classroomName,
+    }));
+
     await axios.post("http://localhost:5000/classrooms", {
       classroom: classroomName,
+      items: classroomItems,
     });
+
     fetchClassrooms();
+    document.getElementById("new-classroom-name").value = "";
   };
 
   const switchClassroom = async (classroomName) => {
@@ -160,16 +169,12 @@ function App() {
     <div className="App">
       <div className="container">
         <div>
-          <button
-            onClick={() => {
-              const classroomName = prompt("Enter Classroom Name:");
-              if (classroomName) {
-                createClassroom(classroomName);
-              }
-            }}
-          >
-            Create Classroom
-          </button>
+          <input
+            type="text"
+            id="new-classroom-name"
+            placeholder="New Classroom Name"
+          />
+          <button onClick={createClassroom}>Submit</button>
           <select
             onChange={(e) => switchClassroom(e.target.value)}
             value={currentClassroom}

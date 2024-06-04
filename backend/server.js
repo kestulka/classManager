@@ -52,20 +52,14 @@ app.delete("/items/:id", async (req, res) => {
 });
 
 app.get("/classrooms", async (req, res) => {
-  const classrooms = await Item.distinct("classroom");
-  res.json(classrooms);
+  const classrooms = await Classroom.find();
+  res.send(classrooms.map((classroom) => classroom.classroom));
 });
 
 app.post("/classrooms", async (req, res) => {
-  const { classroom } = req.body;
-  // Ensure the classroom name is unique
-  const existingClassroom = await Item.findOne({ classroom });
-  if (existingClassroom) {
-    return res.status(400).json({ message: "Classroom already exists" });
-  }
-  const newClassroom = new Classroom({ classroom });
-  await newClassroom.save();
-  res.json({ message: "Classroom created" });
+  const classroom = new Classroom(req.body);
+  await classroom.save();
+  res.send(classroom);
 });
 
 app.listen(5000, () => {
