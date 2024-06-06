@@ -5,10 +5,11 @@
   margin: 10px auto 30px;
   padding: 10px;
   width: 90%;
-  height: 80vh;
+  height: 75vh;
   transition: background-color 0.3s;
   background-image: url("https://seatingchartmaker.app/static/1218e838127bfff3b59fae734d21d5c8/3d469/pairs.jpg");
-  background-size: auto;
+  background-size: 100% 100%;
+  position: relative;
 }
 
 .drop-active {
@@ -38,7 +39,29 @@
   transition: background-color 0.3s;
 }
 
-/* .drag-drop.can-drop {
-  color: #000;
-  background-color: #4e4;
-} */
+.icon {
+  color: red;
+  font-size: 18px;
+}
+.icon:hover {
+  color: green;
+  cursor: pointer;
+}
+
+.icon-container {
+  display: flex;
+  justify-content: space-between;
+  position: absolute;
+  bottom: 5px;
+}
+
+.input {
+  width: 72px;
+  border-radius: 0.5em;
+  font-size: small;
+  background-color: black;
+  border: none;
+  font-style: italic;
+  text-align: center;
+  font-weight: bold;
+}
